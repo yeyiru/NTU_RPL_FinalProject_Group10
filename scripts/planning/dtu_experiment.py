@@ -66,33 +66,32 @@ def get_nbv_ref_index(
     model, images, poses, focal, c, z_near, z_far, candidate_list, budget, ref_index
 ):
     _, _, H, W = images.shape
-
+    import time
+    # 把资料丢到model里面
+    model.network.encode(
+        images[ref_index].unsqueeze(0),
+        poses[ref_index].unsqueeze(0),
+        focal.unsqueeze(0),
+        c.unsqueeze(0),
+    )
     for i in range(budget):
         remain_candidate_list = list(set(candidate_list) - set(ref_index))
         reward_list = []
-
-        model.network.encode(
-            images[ref_index].unsqueeze(0),
-            poses[ref_index].unsqueeze(0),
-            focal.unsqueeze(0),
-            c.unsqueeze(0),
-        )
-
         for target_view in remain_candidate_list:
             novel_pose = poses[target_view]
             target_rays = util.gen_rays(
                 novel_pose.unsqueeze(0), W, H, focal, z_near, z_far, c
             )
             target_rays = target_rays.reshape(1, H * W, -1)
-            predict = DotMap(model.renderer_par(target_rays))
+            t_model = model.renderer_par(target_rays)
+            predict = DotMap(t_model)
             uncertainty = predict["uncertainty"][0]
+            # 根据不确定性计算reward
             reward = torch.sum(uncertainty**2).cpu().numpy()
             reward_list.append(reward)
-
         nbv_index = np.argmax(reward_list)
         new_ref_index = remain_candidate_list[nbv_index]
         ref_index.append(new_ref_index)
-
     return ref_index
 
 
@@ -104,6 +103,7 @@ def get_camera_view_direction(poses):
 
 
 def get_max_dist_ref_index(poses, ref_index, candidate_list, budget):
+    # 从旋转矩阵中提取相机的观察方向
     view_direction = get_camera_view_direction(poses)
 
     for i in range(budget):
@@ -152,9 +152,14 @@ def main():
 class DTUNBVPlanning:
     """
     planning on DTU using different view selection methods: max_view_distance, random, and our uncertainty guided
+    在DTU裡面用三種不同的方法跑
+    - 最大距離法
+    - 隨機法
+    - 我們的不確定性引導法
     """
 
     def __init__(self, args):
+        # 讀取pretrained model
         log_path = os.path.join(root_dir, "neural_rendering", "logs", args.model_name)
         assert os.path.exists(log_path), "experiment does not exist"
         with open(f"{log_path}/training_setup.yaml", "r") as config_file:
@@ -167,6 +172,7 @@ class DTUNBVPlanning:
         gpu_id = list(map(int, args.gpu_id.split()))
         self.device = util.get_cuda(gpu_id[0])
 
+        # 每一次實驗重複幾次
         self.repeat = args.repeat
         self.model = PretrainedModel(cfg["model"], ckpt_file, self.device, gpu_id)
 
@@ -183,7 +189,8 @@ class DTUNBVPlanning:
         ON = len(self.dataset)
 
         selection_type = ["Max. View Distance", "Random", "Ours"]
-        nview_list = [2, 3, 4, 5, 6, 7, 8, 9]  # maximal budget = 9
+        # 最多用幾張圖像建立模型
+        nview_list = [9]  # maximal budget = 9
         scene_index = range(ON)
 
         ref_index_record = {}
@@ -194,25 +201,32 @@ class DTUNBVPlanning:
                 print(f"---------- {nviews} views experiment---------- \n")
                 for i in scene_index:
                     data_instance = self.dataset.__getitem__(i)
+                    # 獲取用來試驗的場景名稱
                     scene_title = data_instance["scan_name"]
                     ref_index_record[nviews][i] = {}
 
                     print(f"test on {scene_title}")
+                    # 讀取所有的圖像
                     images = data_instance["images"].to(self.device)
+                    # 讀取相機焦距
                     focal = data_instance["focal"].to(self.device)
+                    # 相機的光心
                     c = data_instance["c"].to(self.device)
+                    # 讀取相機位姿， 4*4的矩陣
                     poses = data_instance["poses"].to(self.device)
 
                     # random initialize first 2 ref images for all methods
                     for r in range(self.repeat):
                         ref_index_record[nviews][i][r] = {}
+                        # 隨機選擇兩個位置作為參考圖像
                         initial_ref_index = list(
                             np.random.choice(candidate_index_list, 2, replace=False)
                         )
-
+                        # 把剩下的圖像單獨存下來，用來作為候選的
                         candidate_list = list(
                             set(candidate_index_list) - set(initial_ref_index)
                         )
+                        # 預設用來建立模型的圖像數量，其中2張是初始化的，剩下的是用來選擇的
                         budget = nviews - 2
 
                         for stype in selection_type:
@@ -356,7 +370,7 @@ def planning_args(parser):
         "--model_name",
         "-M",
         type=str,
-        required=True,
+        default="/data/2024Fall/RPL/final/neu-nbv/scripts/neural_rendering/logs/dtu_training",
         help="model name of pretrained model",
     )
 
