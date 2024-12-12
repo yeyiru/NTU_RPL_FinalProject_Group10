@@ -1,0 +1,13 @@
+model_path: "./scripts/neural_rendering/logs/dtu_training"
+cuda: 0
+center: [1.0, 0.0, 0.0]
+radius: 0.2
+# 定义角度范围（单位：度）
+phi_list: [0, 60, 120, 180, 240, 300]     # 水平角（方位角）
+theta_list: [0, 30, 60, 90]               # 垂直角（极角）
+up: [0, 0, 1]                             #指示世界坐标的上方向
+budget: 9
+focal: [1380.59, 1381.47]
+c: [977.437, 540.622]
+z_near: 0.1
+z_far: 3.5

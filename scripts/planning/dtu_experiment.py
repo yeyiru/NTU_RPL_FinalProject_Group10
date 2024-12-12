@@ -68,6 +68,10 @@ def get_nbv_ref_index(
     _, _, H, W = images.shape
     import time
     # 把资料丢到model里面
+    t_img = images[ref_index].unsqueeze(0)
+    t_pose = poses[ref_index].unsqueeze(0)
+    t_focal = focal.unsqueeze(0)
+    t_c = c.unsqueeze(0)
     model.network.encode(
         images[ref_index].unsqueeze(0),
         poses[ref_index].unsqueeze(0),
@@ -252,6 +256,7 @@ class DTUNBVPlanning:
                                 ref_index = np.unique(ref_index)
 
                             elif stype == "Ours":
+                                
                                 ref_index = get_nbv_ref_index(
                                     self.model,
                                     images,
@@ -335,7 +340,6 @@ class DTUNBVPlanning:
                                 target_rays = target_rays.reshape(1, H * W, -1)
 
                                 predict = DotMap(self.model.renderer_par(target_rays))
-
                                 metrics_dict = util.calc_metrics(
                                     predict, torch.tensor(gt)
                                 )
@@ -356,8 +360,8 @@ class DTUNBVPlanning:
                                 },
                                 index=[repeat],
                             )
-
-                            total_df = total_df.append(dataframe)
+                            total_df = pandas.concat([total_df, dataframe])
+                            # total_df = total_df.append(dataframe)
         return total_df
 
 
@@ -384,12 +388,12 @@ def planning_args(parser):
 
     # arguments with default values
     parser.add_argument(
-        "--evaluation_only", action="store_true", help="evaluation mode"
+        "--evaluation_only", action="store_true", help="evaluation mode", default=True
     )
     parser.add_argument(
         "--experiment_path",
         type=str,
-        default="not defined",
+        default="/data/2024Fall/RPL/final/neu-nbv/scripts/experiments/dtu/12-12-2024-12-56",
         help="must be defined in evaluation mode",
     )
     parser.add_argument(
