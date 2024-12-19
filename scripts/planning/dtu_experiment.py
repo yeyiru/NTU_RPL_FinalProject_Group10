@@ -61,6 +61,44 @@ def setup_random_seed(seed):
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
 
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.use("TkAgg")
+def plot_pose(poses):
+    # 绘制相机位置散点
+    fig = plt.figure(figsize=(20,16))
+    ax = fig.add_subplot(111, projection='3d')
+    for camera_poses in poses:
+        pos = camera_poses[:3, 3]
+        R = camera_poses[:3, :3]
+        ax.scatter(pos[0], pos[1], pos[2], c='r', marker='o')
+
+        # 绘制相机坐标轴
+        # R的行向量：r, u, -f分别对应x,y,z轴方向
+        cam_x = R[:, 0]
+        cam_y = R[:, 1]
+        cam_z = R[:, 2]
+
+        scale = 0.2  # 坐标轴长度缩放因子
+        
+        # 绘制x轴(红色)
+        ax.quiver(pos[0], pos[1], pos[2],
+                    cam_x[0]*scale, cam_x[1]*scale, cam_x[2]*scale,
+                    color='r', linewidth=2)
+        # 绘制y轴(绿色)
+        ax.quiver(pos[0], pos[1], pos[2],
+                cam_y[0]*scale, cam_y[1]*scale, cam_y[2]*scale,
+                color='g', linewidth=2)
+        # 绘制z轴(蓝色)
+        ax.quiver(pos[0], pos[1], pos[2],
+                cam_z[0]*scale, cam_z[1]*scale, cam_z[2]*scale,
+                color='b', linewidth=2)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    plt.title("Camera Positions and Orientations")
+    plt.tight_layout()
+    plt.show()
 
 def get_nbv_ref_index(
     model, images, poses, focal, c, z_near, z_far, candidate_list, budget, ref_index
@@ -328,6 +366,8 @@ class DTUNBVPlanning:
                                     .numpy()
                                 )
                                 novel_pose = poses[target_view]
+                                plot_pose(poses.cpu().numpy())
+                                
                                 target_rays = util.gen_rays(
                                     novel_pose.unsqueeze(0),
                                     W,
@@ -340,6 +380,9 @@ class DTUNBVPlanning:
                                 target_rays = target_rays.reshape(1, H * W, -1)
 
                                 predict = DotMap(self.model.renderer_par(target_rays))
+                                rgb = predict["rgb"].cpu().numpy().reshape(H, W, 3) * 255
+                                import cv2
+                                cv2.imwrite(f"{scene_title}_{target_view}.png", rgb)
                                 metrics_dict = util.calc_metrics(
                                     predict, torch.tensor(gt)
                                 )

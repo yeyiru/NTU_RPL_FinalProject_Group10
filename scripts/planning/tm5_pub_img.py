@@ -4,7 +4,7 @@ import cv2
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float32MultiArray, MultiArrayDimension
+from geometry_msgs.msg import PoseStamped
 from cv_bridge import CvBridge
 
 class ExtrinsicTriggeredImagePublisher(Node):
@@ -22,8 +22,8 @@ class ExtrinsicTriggeredImagePublisher(Node):
 
         # 声明订阅者，当收到/extrinsic_matrix后触发回调
         self.extrinsic_subscriber = self.create_subscription(
-            Float32MultiArray, 
-            '/extrinsic_matrix', 
+            PoseStamped, 
+            '/target_pose',
             self.extrinsic_callback, 
             10
         )
@@ -59,7 +59,7 @@ class ExtrinsicTriggeredImagePublisher(Node):
     
     def extrinsic_callback(self, msg):
         # 当收到extrinsic_matrix时，打印消息
-        self.get_logger().info(f"Received extrinsic_matrix: {msg.data}")
+        self.get_logger().info(f"Received extrinsic_matrix: {msg}")
         self.current_image_index += 1
 
 def main(args=None):
