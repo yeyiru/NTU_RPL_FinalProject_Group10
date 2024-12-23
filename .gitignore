@@ -17,7 +17,6 @@ __pycache__/
 *.json
 records/
 experiments/
-experiments/
 
 # ROS workspace
 .catkin_tools/
