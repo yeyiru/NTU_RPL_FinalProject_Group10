@@ -16,8 +16,8 @@ __pycache__/
 *.npy
 *.json
 records/
-experiments/dtu
-experiments/TM5_test/*
+experiments/
+experiments/
 
 # ROS workspace
 .catkin_tools/
