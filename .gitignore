@@ -16,12 +16,16 @@ __pycache__/
 *.npy
 *.json
 records/
-experiments/
+experiments/dt*
+experiments/TM5_test/*
 
 # ROS workspace
 .catkin_tools/
 build/
 devel/
+ur5e_ws/build
+ur5e_ws/install
+ur5e_ws/log
 
 
 

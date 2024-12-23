@@ -550,7 +550,6 @@ class TM5NBVPlanner:
                                             self.ref_images.shape[2], 
                                             self.ref_images.shape[3], dtype=torch.float32).to(self.device)
             self.final_images[:2, ...] = self.ref_images
-            del self.ref_images, self.final_images
             # 获得剩下的几个点的图像
             for i in range(len(self.ref_poses[2:, ...])):
                 ref_pose = self.ref_poses[i+2, ...]
@@ -579,9 +578,9 @@ class TM5NBVPlanner:
                     cv2.imwrite(f"{self.experiment_path}/raw_{cnt}.png", raw)
 
                     print('Got image')
-                    # self.ref_images = torch.cat((self.ref_images, 
-                    #                             torch.tensor(_img, dtype=torch.float32, device=self.device).unsqueeze(0)), 
-                    #                             dim=0)
+                    self.ref_images = torch.cat((self.ref_images, 
+                                                torch.tensor(_img, dtype=torch.float32, device=self.device).unsqueeze(0)), 
+                                                dim=0)
                     print(f'Got image No.{cnt}')
                     cnt += 1
                 if cnt == self.budget:
@@ -589,7 +588,7 @@ class TM5NBVPlanner:
                 # self.ref_images = torch.tensor(self.ref_images, dtype=torch.float32).to(self.device)
             print('All images are collected')
             
-            self.render_image()
+            # self.render_image()
         return
 
 if __name__ == "__main__":
